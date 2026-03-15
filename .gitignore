@@ -1,0 +1,16 @@
+# virtual environment
+task/
+
+# python cache
+__pycache__/
+*.pyc
+
+# vector database files
+vector.index
+text_store.pkl
+
+# environment variables
+.env
+
+# OS files
+.DS_Store
