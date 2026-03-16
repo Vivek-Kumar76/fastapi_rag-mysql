@@ -2,7 +2,11 @@ from fastapi import FastAPI
 import faiss
 import numpy as np
 import pickle
+import os
+
 from sentence_transformers import SentenceTransformer
+from rag import build_index
+from db import SessionLocal
 
 app = FastAPI()
 
@@ -12,12 +16,27 @@ text_store = None
 
 
 @app.on_event("startup")
-def load_vector_db():
+def load_system():
     global vector_index, encoder, text_store
+    print("Starting RAG API...")
+    try:
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        print("Database connected successfully.")
+    except Exception as e:
+        print("Database connection failed:", e)
+    if not os.path.exists("vector.index") or not os.path.exists("text_store.pkl"):
+        print("Vector files not found. Creating them...")
+        build_index()
+
+    else:
+        print("Vector files found.")
     vector_index = faiss.read_index("vector.index")
-    encoder = SentenceTransformer("all-MiniLM-L6-v2")
     with open("text_store.pkl", "rb") as f:
         text_store = pickle.load(f)
+
+    encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 @app.get("/")
