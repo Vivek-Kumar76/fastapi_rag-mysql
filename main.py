@@ -23,10 +23,9 @@ def load_system():
         db = SessionLocal()
         db.execute("SELECT 1")
         db.close()
-        print("Database connected successfully.")
     except Exception as e:
         print("Database connection failed:", e)
-    if not os.path.exists("vector.index") or not os.path.exists("text_store.pkl"):
+    if not os.path.exists("vector.index") and not os.path.exists("text_store.pkl"):
         print("Vector files not found. Creating them...")
         build_index()
 
