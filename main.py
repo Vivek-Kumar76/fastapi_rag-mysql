@@ -14,14 +14,8 @@ text_store = None
 @app.on_event("startup")
 def load_vector_db():
     global vector_index, encoder, text_store
-
-    # load FAISS index
     vector_index = faiss.read_index("vector.index")
-
-    # load embedding model
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
-    
-    # load text store
     with open("text_store.pkl", "rb") as f:
         text_store = pickle.load(f)
 
