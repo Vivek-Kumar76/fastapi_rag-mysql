@@ -83,4 +83,4 @@ def ask_question(query: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=7000)
+    uvicorn.run(app, host="localhost", port=8000)
