@@ -3,6 +3,7 @@ import faiss
 import numpy as np
 import pickle
 import os
+from sqlalchemy import text
 
 from sentence_transformers import SentenceTransformer
 from rag import build_index
@@ -21,7 +22,7 @@ def load_system():
     print("Starting RAG API...")
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
     except Exception as e:
         print("Database connection failed:", e)
@@ -36,6 +37,8 @@ def load_system():
         text_store = pickle.load(f)
 
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
+
+
 
 
 @app.get("/")
@@ -76,3 +79,8 @@ def ask_question(query: str):
         "query": query,
         "results": results
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
