@@ -24,7 +24,7 @@ function App() {
     setInput("");
 
     try {
-      const res = await fetch(`http://localhost:8000/ask?query=${input}`);
+      const res = await fetch(`http://187.127.132.79:8000/ask?query=${input}`);
       const data = await res.json();
 
       let answer = data.results.length
