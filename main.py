@@ -9,7 +9,18 @@ from sentence_transformers import SentenceTransformer
 from rag import build_index
 from db import SessionLocal
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 vector_index = None
 encoder = None
@@ -54,7 +65,7 @@ def ask_question(query: str):
     # cosine similarity
     faiss.normalize_L2(query_embedding)
 
-    k = 5
+    k = 1
     limit = 0.40
 
     D, I = vector_index.search(query_embedding, k)
