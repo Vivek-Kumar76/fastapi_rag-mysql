@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import faiss
 import numpy as np
 import pickle
@@ -54,7 +55,11 @@ def load_system():
 
 @app.get("/")
 def home():
-    return {"message": "RAG API is running"}
+    return FileResponse("static_page/index.html")
+
+@app.get("/index.css")
+def css():
+    return FileResponse("static_page/index.css")
 
 
 @app.get("/ask")
