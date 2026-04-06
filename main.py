@@ -65,7 +65,7 @@ def ask_question(query: str):
     # cosine similarity
     faiss.normalize_L2(query_embedding)
 
-    k = 1
+    k = 3
     limit = 0.40
 
     D, I = vector_index.search(query_embedding, k)
@@ -83,7 +83,7 @@ def ask_question(query: str):
             results.append({
                 "question": data["question"],
                 "answer": data["answer"],
-                "score": score
+               # "score": score
             })
 
     return {

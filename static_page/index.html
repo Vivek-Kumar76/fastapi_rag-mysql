@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigiLockerQA</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+    <h2>DigiLockerQA</h2>
+    <br>
+    <div id="Output"></div>
+    <div id ="inputcontainer">
+        <input type="text" id="inputfield" placeholder="Enter Your Text...">
+        <button onclick="sendrequest()">Submit</button>
+    </div>
+
+
+    <script>
+        function sendrequest(){
+            var question = document.getElementById("inputfield").value.trim();
+            var output = document.getElementById("Output");
+
+            var container = document.createElement("div");
+            var q = document.createElement("p");
+            q.innerHTML = "Question: " + question;
+            
+            var a = document.createElement("p");
+            a.innerHTML = "Answer: " ;
+
+            container.appendChild(q);
+            container.appendChild(a);
+            output.appendChild(container);
+
+            output.scrollTop = output.scrollHeight;
+
+            
+            var ajax = new XMLHttpRequest();
+            ajax.open("GET", `http://localhost:8000/ask?query=${encodeURIComponent(question)}`);
+            ajax.onreadystatechange = function(){
+                if(ajax.status ==200){
+                    var data = JSON.parse(ajax.responseText);
+                    var answer = data.results?.[0]?.answer || "No answer found.";
+                    a.innerHTML = answer;
+                } else {
+                    a.innerHTML = "Error fetching response.";
+                }
+                output.scrollTop = output.scrollHeight;
+            };
+            ajax.send();
+
+            
+            
+
+
+
+        }
+
+    </script>
+    
+</body>
+</html>
