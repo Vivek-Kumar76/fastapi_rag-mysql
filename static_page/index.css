@@ -26,6 +26,8 @@
         padding: 12px;
         background: #ffffff;
         overflow-y: auto;
+        display: flex;
+        flex-direction: column;
     }
 
     #Output div {
@@ -53,6 +55,7 @@
         display: flex;
         padding: 10px;
         background: #f4f6f8;
+        border-bottom: 20px solid #357ab8;
     
     }
     

@@ -9,17 +9,19 @@
 <body>
 
     <h2>DigiLockerQA</h2>
-    <br>
-    <div id="Output"></div>
+
     <div id ="inputcontainer">
         <input type="text" id="inputfield" placeholder="Enter Your Text...">
         <button onclick="sendrequest()">Submit</button>
     </div>
+    <br>
+    <div id="Output"></div>
 
 
     <script>
         function sendrequest(){
-            var question = document.getElementById("inputfield").value.trim();
+            var input = document.getElementById("inputfield");
+            var question = input.value.trim();
             var output = document.getElementById("Output");
 
             var container = document.createElement("div");
@@ -31,9 +33,9 @@
 
             container.appendChild(q);
             container.appendChild(a);
-            output.appendChild(container);
+            output.insertBefore(container, output.firstChild);
 
-            output.scrollTop = output.scrollHeight;
+          
 
             
             var ajax = new XMLHttpRequest();
@@ -46,13 +48,13 @@
                 } else {
                     a.innerHTML = "Error fetching response.";
                 }
-                output.scrollTop = output.scrollHeight;
+
             };
             ajax.send();
 
-            
-            
 
+            input.value = "";
+            input.focus();
 
 
         }
