@@ -117,7 +117,7 @@
 
             
             var ajax = new XMLHttpRequest();
-            ajax.open("GET", `http://187.127.132.79:8000/ask?query=${encodeURIComponent(question)}`);
+            ajax.open("GET", `http://187.127.132.79:80/ask?query=${encodeURIComponent(question)}`);
             ajax.onreadystatechange = function(){
                 if(ajax.status ==200){
                     var data = JSON.parse(ajax.responseText);
