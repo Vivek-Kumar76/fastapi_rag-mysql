@@ -53,7 +53,7 @@ def load_system():
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-@app.get("/")
+@app.get("/login.html")
 def home():
     return FileResponse("static_page/login.html")
 
