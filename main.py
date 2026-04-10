@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.responses import FileResponse
+import hashlib
 import faiss
 import numpy as np
 import pickle
@@ -51,16 +53,72 @@ def load_system():
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-
-
 @app.get("/")
 def home():
+    return FileResponse("static_page/login.html")
+
+@app.get("/registeration.html")
+def register_page():
+    return FileResponse("static_page/registeration.html")
+
+
+@app.get("/index.html")
+def main():
     return FileResponse("static_page/index.html")
 
-@app.get("/index.css")
-def css():
-    return FileResponse("static_page/index.css")
 
+
+
+@app.post("/register")
+async def register_user(request: Request):
+    db = SessionLocal()
+    try:
+        data= await request.json()
+        name= data.get("name")
+        username = data.get("username")
+        email = data.get("email")
+        password1 = data.get("password")
+        password = hashlib.sha256(password1.encode()).hexdigest()
+
+        db.execute(text("INSERT INTO users (name, username, email, password) VALUES (:name, :username, :email, :password)"),
+                {"name":name, "username": username, "email": email, "password": password})
+    
+        db.commit()
+        return {"message": "User registered successfully!"}
+    except Exception as e:
+        db.rollback()
+        print("Error during registration:", e)
+        return {"message": "An error occurred during registration. Please try again."}
+    
+        
+    finally:
+        db.close()
+
+
+@app.post("/login")
+async def login_user(request: Request):
+    db = SessionLocal()
+    try:
+        data= await request.json()
+        email = data.get("email")
+        password1 = data.get("password")
+        password = hashlib.sha256(password1.encode()).hexdigest()
+
+        result = db.execute(text("SELECT * FROM users WHERE email = :email AND password = :password"),
+                {"email": email, "password": password}).fetchone()
+    
+        if result:
+            return {"message": "Login successful!"}
+            # file route
+        else:
+            return {"message": "Invalid email or password."}
+    except Exception as e:
+        print("Error during login:", e)
+        return {"message": "An error occurred during login. Please try again."}
+    
+        
+    finally:
+        db.close()
 
 @app.get("/ask")
 def ask_question(query: str):
