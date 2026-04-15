@@ -9,4 +9,4 @@ if st.button("Submit"):
     if data.get("results"):
         st.write(data["results"][0])   
     else:
-        st.write("No results found.")
+        st.write("No results found.") 

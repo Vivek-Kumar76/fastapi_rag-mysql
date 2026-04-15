@@ -21,11 +21,20 @@
     }
 
     h2 {
-        padding: 12px;
-        background: #357ab8;
         color: #fff;
-        text-align: center;
         font-size: 1.5rem;
+        background: none;
+        padding: 0;
+    }
+
+    #header{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #357ab8;
+        padding: 12px;
+        position: relative;
+
     }
 
     #Output {
@@ -35,6 +44,14 @@
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+    }
+
+    #logout-button{
+        position: absolute;
+        right: 12px;
+        margin: 0;
+        padding: 8px 14px;
+        font-size: 15px;
     }
 
     #Output div {
@@ -85,8 +102,10 @@
 
 </head>
 <body>
-
-    <h2>DigiLockerQA</h2>
+    <div id = "header">
+        <h2>DigiLockerQA</h2>
+        <button id="logout-button" onclick="Logout()">Logout</button>
+    </div>
 
     <div id ="inputcontainer">
         <input type="text" id="inputfield" placeholder="Enter Your Text...">
@@ -97,6 +116,12 @@
 
 
     <script>
+        let session_id = sessionStorage.getItem("session_id");
+        if(!session_id){
+            alert("Please login first");
+            window.location.href= "/";
+        }
+
         function sendrequest(){
             var input = document.getElementById("inputfield");
             var question = input.value.trim();
@@ -118,6 +143,7 @@
             
             var ajax = new XMLHttpRequest();
             ajax.open("GET", `http://187.127.132.79:80/ask?query=${encodeURIComponent(question)}`);
+            ajax.setRequestHeader("session_id",sessionStorage.getItem("session_id"));
             ajax.onreadystatechange = function(){
                 if(ajax.status ==200){
                     var data = JSON.parse(ajax.responseText);
@@ -136,6 +162,30 @@
 
 
         }
+
+
+        function Logout(){
+            var ajax = new XMLHttpRequest();
+            ajax.open("GET","http://187.127.132.79:80/logout",true);
+            ajax.setRequestHeader("session_id",sessionStorage.getItem("session_id"));
+            ajax.onreadystatechange = function(){
+                if (ajax.status==200){
+                    var data = JSON.parse(ajax.responseText);
+                    if (data.message === "Logout Successfully"){
+                        sessionStorage.removeItem("session_id")
+                        window.location.href = "/";
+
+                    }else{
+                        alert("Logout Failed")
+                    }
+                }else{
+                    alert("Server error")
+                }
+            
+            };
+            ajax.send();
+        }
+        
 
     </script>
     

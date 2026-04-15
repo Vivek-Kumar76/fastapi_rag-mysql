@@ -6,6 +6,7 @@ import faiss
 import numpy as np
 import pickle
 import os
+import secrets
 from sqlalchemy import text
 
 from sentence_transformers import SentenceTransformer
@@ -28,6 +29,7 @@ app.add_middleware(
 vector_index = None
 encoder = None
 text_store = None
+
 
 
 @app.on_event("startup")
@@ -84,6 +86,7 @@ async def register_user(request: Request):
                 {"name":name, "username": username, "email": email, "password": password})
     
         db.commit()
+
         return {"message": "User registered successfully!"}
     except Exception as e:
         db.rollback()
@@ -108,8 +111,14 @@ async def login_user(request: Request):
                 {"email": email, "password": password}).fetchone()
     
         if result:
-            return {"message": "Login successful!"}
-            # file route
+            session_id = secrets.token_hex(5)
+            db.execute(
+                text("INSERT INTO SESSION (user_id, session_id) VALUES (:user_id, :session_id)"),
+                {"user_id": result.id, "session_id": session_id}
+            )
+            db.commit()
+            return {"message": "Login successful!", "session_id":session_id}
+        
         else:
             return {"message": "Invalid email or password."}
     except Exception as e:
@@ -121,7 +130,19 @@ async def login_user(request: Request):
         db.close()
 
 @app.get("/ask")
-def ask_question(query: str):
+def ask_question(request:Request, query: str):
+    session_id = request.headers.get("session_id")
+    if not session_id:
+        return {"message":"Unauthorized"}
+    
+    db = SessionLocal()
+    session = db.execute(
+        text("select * from session where session_id = :sid"),
+        {"sid":session_id}
+    ).fetchone()
+
+    if not session:
+        return{"message":"invalid session"}
 
     query_embedding = encoder.encode([query])
     query_embedding = np.array(query_embedding).astype("float32")
@@ -153,6 +174,20 @@ def ask_question(query: str):
         "query": query,
         "results": results
     }
+
+@app.get("/logout")
+def logout(request:Request):
+    session_id = request.headers.get("session_id")
+    db= SessionLocal()
+
+
+    db.execute(
+        text("update session set is_active = 0 where session_id = :sid"),
+        {"sid" :  session_id}
+    )
+
+    db.commit()
+    return {"message":"Logout Successfully"}
 
 
 if __name__ == "__main__":
