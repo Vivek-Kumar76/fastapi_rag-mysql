@@ -110,20 +110,22 @@ async def login_user(request: Request):
         result = db.execute(text("SELECT * FROM users WHERE email = :email AND password = :password"),
                 {"email": email, "password": password}).fetchone()
     
-        if result:
-            session_id = secrets.token_hex(5)
-            db.execute(
+        if not result:
+            return {"message":"Invalid email or password"}
+        
+        session_id = secrets.token_hex(5)
+        db.execute(
                 text("INSERT INTO SESSION (user_id, session_id) VALUES (:user_id, :session_id)"),
                 {"user_id": result._mapping["id"], "session_id": session_id}
             )
-            db.commit()
-            return {"message": "Login successful!", "session_id":session_id}
-        
-        else:
-            return {"message": "Invalid email or password."}
+        db.commit()
+        return {"message": "Login successful!", "session_id":session_id}
+    
     except Exception as e:
-        print("Error during login:", e)
-        return {"message": "An error occurred during login. Please try again."}
+        import traceback
+        traceback.print_exc()
+        return {"message": "An error occurred during login. Please try again.",
+                "error":str(e)}
     
         
     finally:
