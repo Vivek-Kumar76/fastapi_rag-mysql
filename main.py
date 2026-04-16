@@ -114,7 +114,7 @@ async def login_user(request: Request):
             session_id = secrets.token_hex(5)
             db.execute(
                 text("INSERT INTO SESSION (user_id, session_id) VALUES (:user_id, :session_id)"),
-                {"user_id": result.id, "session_id": session_id}
+                {"user_id": result[0], "session_id": session_id}
             )
             db.commit()
             return {"message": "Login successful!", "session_id":session_id}
