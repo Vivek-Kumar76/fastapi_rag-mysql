@@ -6,3 +6,5 @@ uvicorn
 sqlalchemy 
 pymysql
 streamlit
+google-genai
+python-jose[cryptography]

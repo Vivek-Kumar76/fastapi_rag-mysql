@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, requests
 from fastapi import Request
 from fastapi.responses import FileResponse
 import hashlib
@@ -6,22 +6,31 @@ import faiss
 import numpy as np
 import pickle
 import os
-import secrets
+import requests
+from jose import jwt
+from datetime import datetime, timedelta
 from sqlalchemy import text
 
 from sentence_transformers import SentenceTransformer
 from rag import build_index
 from db import SessionLocal
 
+from google import genai
+from google.genai import types
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+client = genai.Client(api_key="API_KEY")
 
+SECRET_KEY ="fastapi_rag-mysql"
+ALGORITHM ="HS256"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -113,17 +122,20 @@ async def login_user(request: Request):
         if not result:
             return {"message":"Invalid email or password"}
         
-        session_id = secrets.token_hex(5)
+        expire= datetime.utcnow()+timedelta(hours=2)
+        token= jwt.encode({"sub":email,"exp":expire},
+                          SECRET_KEY,
+                          algorithm=ALGORITHM)
+
+
         db.execute(
                 text("INSERT INTO SESSION (user_id, session_id) VALUES (:user_id, :session_id)"),
-                {"user_id": result._mapping["id"], "session_id": session_id}
+                {"user_id": result._mapping["id"], "session_id": token}
             )
         db.commit()
-        return {"message": "Login successful!", "session_id":session_id}
+        return {"message": "Login successful!", "token":token}
     
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return {"message": "An error occurred during login. Please try again.",
                 "error":str(e)}
     
@@ -133,7 +145,7 @@ async def login_user(request: Request):
 
 @app.get("/ask")
 def ask_question(request:Request, query: str):
-    session_id = request.headers.get("session_id")
+    session_id = request.headers.get("token")
     if not session_id:
         return {"message":"Unauthorized"}
     
@@ -152,7 +164,7 @@ def ask_question(request:Request, query: str):
     faiss.normalize_L2(query_embedding)
 
     k = 3
-    limit = 0.40
+    limit = 0.80
 
     D, I = vector_index.search(query_embedding, k)
 
@@ -167,10 +179,33 @@ def ask_question(request:Request, query: str):
         data = text_store.get(id_)
         if data:
             results.append({
-                "question": data["question"],
+                #"question": data["question"],
                 "answer": data["answer"],
                # "score": score
             })
+    if (len(results)==0):
+        system ="Answer the query in short and precisely with refrennce of source of data. Do not answer, irrelevant question. Just tell the user to ask question in context of digilocker and govt doc only. "
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                temperature=0,
+                ),
+                contents=query
+                )
+        answer =" "
+        if hasattr(response, "text") and response.text:
+            answer = response.text
+        elif hasattr(response, "candidates") and response.candidates:
+            parts = response.candidates[0].content.parts
+            if parts and hasattr(parts[0], "text"):
+                answer = parts[0].text
+        if not answer or answer.strip() == "":
+            answer = "No answer from Gemini"
+
+
+        results.append({"answer": answer})
+
 
     return {
         "query": query,
@@ -179,7 +214,7 @@ def ask_question(request:Request, query: str):
 
 @app.get("/logout")
 def logout(request:Request):
-    session_id = request.headers.get("session_id")
+    session_id = request.headers.get("token")
     db= SessionLocal()
 
 
@@ -190,6 +225,26 @@ def logout(request:Request):
 
     db.commit()
     return {"message":"Logout Successfully"}
+
+API_KEY = "API_KEY"
+
+@app.get("/weather")
+def getweather(lat:float, long:float):
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={long}&appid={API_KEY}&units=metric"
+
+    response = requests.get(url)
+
+    if (response.status_code != 200):
+        return {"error":"Failed to fetch weather data"}
+    
+    data = response.json()
+
+    return {
+        "city":data.get("name"),
+        "temperature": data["main"]["temp"],
+        "description": data["weather"][0]["description"]
+    }
+
 
 
 if __name__ == "__main__":

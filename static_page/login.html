@@ -83,15 +83,16 @@
                 return;
             }
             var ajax = new XMLHttpRequest();
-            ajax.open("POST", "http://187.127.132.79:80/login", true);
+            ajax.open("POST", "http://localhost:8000/login", true);
             ajax.setRequestHeader("Content-Type", "application/json");
 
             ajax.onreadystatechange = function(){ 
                 if (ajax.readyState === 4) {
                 if (ajax.status === 200) {
                     const data = JSON.parse(ajax.responseText);
+                    console.log("DATA : ",data)
                     if (data.message === "Login successful!") {
-                        sessionStorage.setItem("session_id", data.session_id);
+                        localStorage.setItem("token", data.token);
                         window.location.href = "index.html";
                     } else {
                         alert(data.message);

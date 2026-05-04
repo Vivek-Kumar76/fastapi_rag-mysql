@@ -104,8 +104,10 @@
 <body>
     <div id = "header">
         <h2>DigiLockerQA</h2>
+        <button id="weather" onclick="getweather()">weather</button>
         <button id="logout-button" onclick="Logout()">Logout</button>
     </div>
+
 
     <div id ="inputcontainer">
         <input type="text" id="inputfield" placeholder="Enter Your Text...">
@@ -116,7 +118,7 @@
 
 
     <script>
-        let session_id = sessionStorage.getItem("session_id");
+        let session_id = localStorage.getItem("token");
         if(!session_id){
             alert("Please login first");
             window.location.href= "/";
@@ -127,31 +129,32 @@
             var question = input.value.trim();
             var output = document.getElementById("Output");
 
-            var container = document.createElement("div");
-            var q = document.createElement("p");
-            q.innerHTML = "Question: " + question;
-            
-            var a = document.createElement("p");
-            a.innerHTML = "Answer: " ;
-
-            container.appendChild(q);
-            container.appendChild(a);
-            output.insertBefore(container, output.firstChild);
-
-          
-
+            if (!question) return;
             
             var ajax = new XMLHttpRequest();
-            ajax.open("GET", `http://187.127.132.79:80/ask?query=${encodeURIComponent(question)}`);
-            ajax.setRequestHeader("session_id",sessionStorage.getItem("session_id"));
+            ajax.open("GET", `http://localhost:8000/ask?query=${encodeURIComponent(question)}`);
+            ajax.setRequestHeader("token",localStorage.getItem("token"));
             ajax.onreadystatechange = function(){
-                if(ajax.status ==200){
-                    var data = JSON.parse(ajax.responseText);
-                    var answer = data.results?.[0]?.answer || "No answer found.";
-                    a.innerHTML = answer;
-                } else {
-                    a.innerHTML = "Error fetching response.";
-                }
+                if(ajax.readyState ===4){
+                    var container = document.createElement("div");
+                    var q = document.createElement("P");
+                    q.innerHTML= "Question: "+question;
+                    var a= document.createElement("p");
+
+                    if (ajax.status===200){
+                        var data = JSON.parse(ajax.responseText);
+                        var answer= data.results?.[0]?.answer;
+                        a.innerHTML="Answer : "+answer;
+                    }else{
+                        a.innerHTML= "Error fetching response."
+
+                    }
+                    container.appendChild(q);
+                    container.appendChild(a);
+
+                    output.insertBefore(container,output.firstChild);
+                     
+                } 
 
             };
             ajax.send();
@@ -163,16 +166,53 @@
 
         }
 
+        async function getweather(){
+            if (!navigator.geolocation){
+                alert("Geoloaction is not supported ");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    var lat = position.coords.latitude;
+                    var long = position.coords.longitude;
+
+
+                    try{
+                        var response = await fetch(`http://localhost:8000/weather?lat=${lat}&long=${long}`);
+                        const data = await response.json();
+                        if (data.error){
+                            document.getElementById("Output").innerHTML = "Error fetching weather data";
+                        }
+                        console.log("Weather Data : ",data);
+                        document.getElementById("Output").innerHTML =
+                        `${data.city}
+                        <br>
+                        ${data.temperature}°C
+                        <br>
+                        ${data.description}`;
+
+
+                        
+
+                    }catch(error){
+                        document.getElementById("Output").innerHTML = "Error fetching weather data";
+                    }
+                }, () => {
+                    alert("Please allow location access")
+                }
+            )
+        }
+
 
         function Logout(){
             var ajax = new XMLHttpRequest();
-            ajax.open("GET","http://187.127.132.79:80/logout",true);
-            ajax.setRequestHeader("session_id",sessionStorage.getItem("session_id"));
+            ajax.open("GET","http://localhost:8000/logout",true);
+            ajax.setRequestHeader("token",sessionStorage.getItem("token"));
             ajax.onreadystatechange = function(){
                 if (ajax.status==200){
                     var data = JSON.parse(ajax.responseText);
                     if (data.message === "Logout Successfully"){
-                        sessionStorage.removeItem("session_id")
+                        localStorage.removeItem("token")
                         window.location.href = "/";
 
                     }else{
