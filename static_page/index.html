@@ -104,7 +104,6 @@
 <body>
     <div id = "header">
         <h2>DigiLockerQA</h2>
-        <button id="weather" onclick="getweather()">weather</button>
         <button id="logout-button" onclick="Logout()">Logout</button>
     </div>
 
@@ -143,6 +142,7 @@
 
                     if (ajax.status===200){
                         var data = JSON.parse(ajax.responseText);
+                        console.log("Response Data : ",data);
                         var answer= data.results?.[0]?.answer;
                         a.innerHTML="Answer : "+answer;
                     }else{
@@ -165,44 +165,6 @@
 
 
         }
-
-        async function getweather(){
-            if (!navigator.geolocation){
-                alert("Geoloaction is not supported ");
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    var lat = position.coords.latitude;
-                    var long = position.coords.longitude;
-
-
-                    try{
-                        var response = await fetch(`http://localhost:8000/weather?lat=${lat}&long=${long}`);
-                        const data = await response.json();
-                        if (data.error){
-                            document.getElementById("Output").innerHTML = "Error fetching weather data";
-                        }
-                        console.log("Weather Data : ",data);
-                        document.getElementById("Output").innerHTML =
-                        `${data.city}
-                        <br>
-                        ${data.temperature}°C
-                        <br>
-                        ${data.description}`;
-
-
-                        
-
-                    }catch(error){
-                        document.getElementById("Output").innerHTML = "Error fetching weather data";
-                    }
-                }, () => {
-                    alert("Please allow location access")
-                }
-            )
-        }
-
 
         function Logout(){
             var ajax = new XMLHttpRequest();

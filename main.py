@@ -22,7 +22,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-client = genai.Client(api_key="API_KEY")
+API_KEY = "your_openweathermap_api_key_here"
+
+client = genai.Client(api_key="your_google_genai_api_key_here")
 
 SECRET_KEY ="fastapi_rag-mysql"
 ALGORITHM ="HS256"
@@ -143,6 +145,81 @@ async def login_user(request: Request):
     finally:
         db.close()
 
+def gemini_response(query:str):
+    system= "Answer the query in short and precisely with refrennce of source of data. Do not answer, irrelevant question. In case of irrelevant question, just tell the user to ask question in context of digilocker and govt doc only. "
+    response= client.models.generate_content(
+        model="gemini-3-flash-preview",
+        config=types.GenerateContentConfig(
+            system_instruction=system,
+            temperature=0,
+        ),
+        contents=query
+    )
+    answer = "No answer from Gemini"
+    if hasattr(response, "text") and response.text:
+        answer = response.text
+    elif hasattr(response, "candidates") and response.candidates:
+        parts = response.candidates[0].content.parts
+        if parts and hasattr(parts[0], "text"):
+            answer = parts[0].text
+    return {"answer":answer}
+
+
+def router(query:str):
+    router_prompt= """ You are arouting assistant.
+    decide which function to call based on the query:
+      -if the query is about the weather,temperature or location, return "weather"
+      -if the query is about digilocker, govt doc retuen "gemini"
+      -if irrelevant retuen please relavant question only.
+    only output one word: weather, gemini or reject.
+
+"""
+    response= client.models.generate_content(
+        model="gemini-3-flash-preview",
+        config=types.GenerateContentConfig(
+            system_instruction=router_prompt,
+            temperature=0,
+        ),
+        contents=query
+    )
+    return response.text.strip().lower()
+
+def extract_city(query:str):
+    prompt="Extract the city name from the query. If the city name is not found in the query, return 'Location not found'."
+    response= client.models.generate_content(
+        model= "gemini-3-flash-preview",
+        config = types.GenerateContentConfig(
+            system_instruction=prompt,
+            temperature=0,
+        ),
+        contents=query
+    )
+    return response.text.strip()
+
+def getweather(city:str):
+    url= f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+    response= requests.get(url)
+
+    if response.status_code!=200:
+        return {"error":f"Failed to fetch weather data for {city}"}
+    data=response.json()
+
+    prompt= f"take this {data} of weather data and give me weather information in a paragraph describing the current weather conditions in {city} including temperature and weather description."
+    system_prompt= "You are a helpful weather broadcaster assistant for providing weather information based on the given data. Answer the query in short and precise manner."
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0,
+        ),
+        contents=prompt
+    )
+    return {"answer":response.text.strip()}
+
+def weather(city:str):
+    return getweather(city)
+
+
 @app.get("/ask")
 def ask_question(request:Request, query: str):
     session_id = request.headers.get("token")
@@ -184,29 +261,15 @@ def ask_question(request:Request, query: str):
                # "score": score
             })
     if (len(results)==0):
-        system ="Answer the query in short and precisely with refrennce of source of data. Do not answer, irrelevant question. Just tell the user to ask question in context of digilocker and govt doc only. "
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            config=types.GenerateContentConfig(
-                system_instruction=system,
-                temperature=0,
-                ),
-                contents=query
-                )
-        answer =" "
-        if hasattr(response, "text") and response.text:
-            answer = response.text
-        elif hasattr(response, "candidates") and response.candidates:
-            parts = response.candidates[0].content.parts
-            if parts and hasattr(parts[0], "text"):
-                answer = parts[0].text
-        if not answer or answer.strip() == "":
-            answer = "No answer from Gemini"
-
-
-        results.append({"answer": answer})
-
-
+        decision = router(query)
+        if decision == "weather":
+            city= extract_city(query)
+            if city.lower() == "location not found":
+                return {"message":"Could not extract location from the query. Please specify the city name."}
+            else:
+                results.append(getweather(city))
+        elif decision == "gemini":
+            results.append(gemini_response(query))
     return {
         "query": query,
         "results": results
@@ -226,24 +289,9 @@ def logout(request:Request):
     db.commit()
     return {"message":"Logout Successfully"}
 
-API_KEY = "API_KEY"
 
-@app.get("/weather")
-def getweather(lat:float, long:float):
-    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={long}&appid={API_KEY}&units=metric"
-
-    response = requests.get(url)
-
-    if (response.status_code != 200):
-        return {"error":"Failed to fetch weather data"}
-    
-    data = response.json()
-
-    return {
-        "city":data.get("name"),
-        "temperature": data["main"]["temp"],
-        "description": data["weather"][0]["description"]
-    }
+#def weather(city:str):
+#    return getweather(city)
 
 
 
